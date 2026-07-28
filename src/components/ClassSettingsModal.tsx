@@ -8,6 +8,7 @@ import {
 import { ClassConfig, Student, ShiftAssignment, PenaltyRecord, ClassDocument } from '../types';
 import { GlassSelect, SelectOption } from './GlassSelect';
 import { User } from 'firebase/auth';
+import { CURRENT_APP_VERSION } from '../lib/versionConfig';
 
 interface ClassSettingsModalProps {
   isOpen: boolean;
@@ -333,7 +334,7 @@ export const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
                     </div>
                     <div>
                       <div className="text-xs font-bold uppercase tracking-wider text-purple-300">Phiên bản Hệ thống</div>
-                      <div className="text-xl font-black display-font text-white">Phiên bản 28.07.26</div>
+                      <div className="text-xl font-black display-font text-white">Phiên bản v{CURRENT_APP_VERSION}</div>
                     </div>
                   </div>
 

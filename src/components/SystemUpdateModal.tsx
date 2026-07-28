@@ -6,6 +6,7 @@ interface SystemUpdateModalProps {
   isOpen: boolean;
   onCloseLater: () => void;
   onUpdateComplete: () => void;
+  currentVersion?: string;
   latestVersion?: string;
   changelog?: string[];
 }
@@ -14,13 +15,13 @@ export const SystemUpdateModal: React.FC<SystemUpdateModalProps> = ({
   isOpen,
   onCloseLater,
   onUpdateComplete,
-  latestVersion = '28.07.26',
+  currentVersion = '1.1.0',
+  latestVersion = '1.2.0',
   changelog = [
-    '🎙️ Trình chiếu xếp loại toàn màn hình từng tổ có Giọng đọc nữ tiếng Việt tự động Max Vol.',
-    '⚙️ Cài đặt Khối 6 - 9, Lớp A1 - A5 và Năm học tự động đồng bộ toàn hệ thống.',
-    '📱 Chẩn đoán tên thiết bị (Máy tính / Điện thoại / Tablet), hệ điều hành và trình duyệt Web.',
-    '☁️ Đồng bộ dữ liệu Real-time 0ms trên Firebase Cloud Firestore đa thiết bị.',
-    '📄 Nâng cấp xuất file Excel / Word & Phiếu phạt chuẩn định dạng sư phạm.',
+    '✨ Bắt buộc giáo viên mới cài đặt cấu hình thông tin lớp học lần đầu.',
+    '⚙️ Tự động kiểm tra và thông báo khi có bản cập nhật mới được deploy trên Web.',
+    '📱 Nâng cấp chẩn đoán thiết bị & môi trường trình duyệt Web.',
+    '🔒 Bảo mật & tối ưu đồng bộ dữ liệu Real-time Firestore.',
   ],
 }) => {
   const [isUpdating, setIsUpdating] = useState(false);
@@ -90,9 +91,14 @@ export const SystemUpdateModal: React.FC<SystemUpdateModalProps> = ({
                     <Sparkles className="w-6 h-6 text-amber-300" />
                   </div>
                   <div>
-                    <span className="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-black rounded-full uppercase tracking-wider inline-block mb-1">
-                      Cập Nhật Hệ Thống Mới
-                    </span>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <span className="px-2.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black rounded-full uppercase tracking-wider">
+                        Cập Nhật Hệ Thống Web
+                      </span>
+                      <span className="px-2 py-0.5 bg-purple-500/20 text-purple-200 border border-purple-500/30 text-[10px] font-mono font-bold rounded-md">
+                        v{currentVersion} ➔ v{latestVersion}
+                      </span>
+                    </div>
                     <h2 className="text-2xl sm:text-3xl font-black display-font text-white tracking-tight">
                       Đã Có Phiên Bản v{latestVersion}!
                     </h2>
@@ -110,7 +116,7 @@ export const SystemUpdateModal: React.FC<SystemUpdateModalProps> = ({
 
               {/* Version Notice Message */}
               <p className="text-sm text-slate-200 leading-relaxed bg-white/5 p-4 rounded-2xl border border-white/10">
-                Hệ thống <strong>Quản Lý Lớp Học Số</strong> đã phát hành bản cập nhật mới nhất (<strong>v{latestVersion}</strong>). Vui lòng nâng cấp để trải nghiệm trọn vẹn tất cả tính năng mới!
+                Hệ thống <strong>Quản Lý Lớp Học Số</strong> vừa xuất bản phiên bản mới <strong>v{latestVersion}</strong> (hiện tại: <strong>v{currentVersion}</strong>). Nhấn <strong>"Cập Nhật Ngay"</strong> để tải gói mã nguồn mới nhất!
               </p>
 
               {/* Changelog List */}

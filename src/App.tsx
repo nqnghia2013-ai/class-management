@@ -17,9 +17,7 @@ import { GlassSelect } from './components/GlassSelect';
 import { ClassSettingsModal } from './components/ClassSettingsModal';
 import { WeeklyRatingPresentation } from './components/WeeklyRatingPresentation';
 import { SystemUpdateModal } from './components/SystemUpdateModal';
-import { saveDocumentIDB, loadDocumentsIDB, deleteDocumentIDB } from './lib/idb';
-
-const CURRENT_APP_VERSION = '28.07.26';
+import { CURRENT_APP_VERSION, checkServerVersion } from './lib/versionConfig';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
@@ -34,38 +32,71 @@ export default function App() {
 
   // System Update state
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [updateDetails, setUpdateDetails] = useState<{
+    currentVersion: string;
+    latestVersion: string;
+    changelog: string[];
+  }>({
+    currentVersion: CURRENT_APP_VERSION,
+    latestVersion: CURRENT_APP_VERSION,
+    changelog: [],
+  });
 
-  // Check system version on mount
-  useEffect(() => {
+  const performVersionCheck = async (isManual = false) => {
     try {
-      const installedVersion = localStorage.getItem('installedAppVersion');
-      const postponedVersion = localStorage.getItem('postponedAppVersion');
-
-      if (!installedVersion) {
-        // Brand new installation: mark version 28.07.26
-        localStorage.setItem('installedAppVersion', CURRENT_APP_VERSION);
-      } else if (installedVersion !== CURRENT_APP_VERSION && postponedVersion !== CURRENT_APP_VERSION) {
-        // App updated on Vercel/GitHub but user hasn't updated or postponed -> Prompt System Update Modal!
+      const res = await checkServerVersion();
+      if (res.hasUpdate) {
+        setUpdateDetails({
+          currentVersion: res.currentVersion,
+          latestVersion: res.latestVersion,
+          changelog: res.changelog,
+        });
         setShowUpdateModal(true);
+      } else if (isManual) {
+        alert(`Hệ thống đang chạy trên phiên bản mới nhất (v${res.currentVersion}).`);
       }
     } catch (e) {
-      console.error('Error checking system update version', e);
+      console.warn('Error performing version check', e);
     }
+  };
+
+  // Check system version on mount, periodically & on tab focus
+  useEffect(() => {
+    // Initial check
+    performVersionCheck(false);
+
+    // Periodic check every 10 minutes
+    const intervalId = setInterval(() => {
+      performVersionCheck(false);
+    }, 10 * 60 * 1000);
+
+    // Tab visibility change check
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        performVersionCheck(false);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const handleUpdateComplete = () => {
     try {
-      localStorage.setItem('installedAppVersion', CURRENT_APP_VERSION);
+      localStorage.setItem('installedAppVersion', updateDetails.latestVersion);
       localStorage.removeItem('postponedAppVersion');
     } catch (e) {}
     setShowUpdateModal(false);
-    // Refresh application to reload newest assets & cache
+    // Hard reload application to clear asset cache
     window.location.reload();
   };
 
   const handlePostponeUpdate = () => {
     try {
-      localStorage.setItem('postponedAppVersion', CURRENT_APP_VERSION);
+      localStorage.setItem('postponedAppVersion', updateDetails.latestVersion);
     } catch (e) {}
     setShowUpdateModal(false);
   };
@@ -73,8 +104,8 @@ export default function App() {
   const handleManualCheckUpdate = () => {
     setShowSettingsModal(false);
     setTimeout(() => {
-      setShowUpdateModal(true);
-    }, 200);
+      performVersionCheck(true);
+    }, 300);
   };
 
   // Class Settings state with local storage fallback
@@ -2032,7 +2063,9 @@ export default function App() {
         isOpen={showUpdateModal}
         onCloseLater={handlePostponeUpdate}
         onUpdateComplete={handleUpdateComplete}
-        latestVersion={CURRENT_APP_VERSION}
+        currentVersion={updateDetails.currentVersion}
+        latestVersion={updateDetails.latestVersion}
+        changelog={updateDetails.changelog}
       />
     </div>
     </>

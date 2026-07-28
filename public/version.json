@@ -1,0 +1,10 @@
+{
+  "version": "1.2.0",
+  "releaseDate": "28/07/2026",
+  "changelog": [
+    "✨ Bắt buộc giáo viên mới cài đặt cấu hình thông tin lớp học lần đầu.",
+    "⚙️ Tự động kiểm tra và thông báo khi có bản cập nhật mới được deploy trên Web.",
+    "📱 Nâng cấp chẩn đoán thiết bị & môi trường trình duyệt Web.",
+    "🔒 Bảo mật & tối ưu đồng bộ dữ liệu Real-time Firestore."
+  ]
+}
