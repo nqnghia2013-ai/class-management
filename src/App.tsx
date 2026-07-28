@@ -17,12 +17,14 @@ import { GlassSelect } from './components/GlassSelect';
 import { ClassSettingsModal } from './components/ClassSettingsModal';
 import { WeeklyRatingPresentation } from './components/WeeklyRatingPresentation';
 import { SystemUpdateModal } from './components/SystemUpdateModal';
+import { LoginPage } from './components/LoginPage';
 import { APP_BUILD_VERSION, checkServerVersion } from './lib/versionConfig';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [currentWeek, setCurrentWeek] = useState<number>(1);
   const [selectedDay, setSelectedDay] = useState<DayType>('Thứ 2');
+  const [isGuestMode, setIsGuestMode] = useState(false);
   const [activePenaltyId, setActivePenaltyId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const ratingsContainerRef = useRef<HTMLDivElement>(null);
@@ -1763,34 +1765,12 @@ export default function App() {
     );
   }
 
-  if (!user) {
+  if (!user && !isGuestMode) {
     return (
-      <>
-        <div className="atmosphere" />
-        <div className="min-h-screen flex items-center justify-center relative z-10 px-4">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9, y: 20 }} 
-            animate={{ opacity: 1, scale: 1, y: 0 }} 
-            transition={{ duration: 0.5, ease: "easeOut" }}
-            className="bg-[#060c21]/80 backdrop-blur-3xl p-10 rounded-[2rem] shadow-[0_20px_60px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.1)] border border-white/10 max-w-md w-full text-center relative overflow-hidden"
-          >
-            <div className="mb-8 relative">
-              <div className="absolute inset-0 bg-blue-500 blur-[50px] opacity-20 -z-10 rounded-full"></div>
-              <h1 className="text-5xl display-font font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">Quản Lý Lao Động</h1>
-              <p className="text-slate-300">Vui lòng đăng nhập để bắt đầu sử dụng và đồng bộ dữ liệu của bạn.</p>
-            </div>
-            <motion.button 
-              whileHover={{ scale: 1.02, translateY: -2 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleLogin}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white py-4 rounded-2xl font-bold text-base flex items-center justify-center space-x-3 transition-all shadow-[0_8px_20px_rgba(59,130,246,0.3)] border border-white/10"
-            >
-              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-6 h-6 bg-white rounded-full p-0.5" />
-              <span>Đăng nhập qua Google</span>
-            </motion.button>
-          </motion.div>
-        </div>
-      </>
+      <LoginPage 
+        onLoginGoogle={handleLogin} 
+        onContinueGuest={() => setIsGuestMode(true)} 
+      />
     );
   }
 
