@@ -94,7 +94,10 @@ export default function App() {
     };
   });
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [isMandatorySettings, setIsMandatorySettings] = useState(false);
   const [showRatingsPresentation, setShowRatingsPresentation] = useState(false);
+
+
 
   useEffect(() => {
     const onFullscreenChange = () => {
@@ -236,19 +239,25 @@ export default function App() {
           }
         }, err => console.warn("ClassOfficers sync error:", err)));
 
-        // 11. Class Settings Config Document
+        // 11. Class Settings Config Document (Enforce mandatory initial setup for new teachers)
         unsubs.push(onSnapshot(doc(db, "users", currentUser.uid, "settings", "classConfig"), snapshot => {
           if (snapshot.exists()) {
             const loadedConfig = snapshot.data() as ClassConfig;
-            if (loadedConfig && loadedConfig.className) {
+            if (loadedConfig && loadedConfig.className && loadedConfig.configured) {
               setClassConfig(loadedConfig);
+              setIsMandatorySettings(false);
               try {
                 localStorage.setItem('classConfig', JSON.stringify(loadedConfig));
               } catch (e) {}
+            } else {
+              // Not configured yet -> prompt mandatory initial setup modal!
+              setShowSettingsModal(true);
+              setIsMandatorySettings(true);
             }
           } else {
-            // Write default classConfig to Firestore for the authenticated account
-            setDoc(doc(db, "users", currentUser.uid, "settings", "classConfig"), classConfig).catch(e => console.warn("Init classConfig write error:", e));
+            // New teacher login -> prompt mandatory initial setup modal!
+            setShowSettingsModal(true);
+            setIsMandatorySettings(true);
           }
         }, err => console.warn("ClassConfig sync error:", err)));
 
@@ -285,15 +294,17 @@ export default function App() {
   };
 
   const handleSaveClassConfig = async (newConfig: ClassConfig) => {
-    setClassConfig(newConfig);
+    const updatedConfig: ClassConfig = { ...newConfig, configured: true };
+    setClassConfig(updatedConfig);
+    setIsMandatorySettings(false);
     try {
-      localStorage.setItem('classConfig', JSON.stringify(newConfig));
+      localStorage.setItem('classConfig', JSON.stringify(updatedConfig));
     } catch (e) {
       console.error('Error saving classConfig to localStorage', e);
     }
     if (user) {
       try {
-        await setDoc(doc(db, "users", user.uid, "settings", "classConfig"), newConfig);
+        await setDoc(doc(db, "users", user.uid, "settings", "classConfig"), updatedConfig);
       } catch (err) {
         console.error('Error saving classConfig to Firestore', err);
       }
@@ -1989,7 +2000,11 @@ export default function App() {
       {/* Class Settings & System Info Modal */}
       <ClassSettingsModal
         isOpen={showSettingsModal}
-        onClose={() => setShowSettingsModal(false)}
+        onClose={() => {
+          if (!isMandatorySettings) {
+            setShowSettingsModal(false);
+          }
+        }}
         config={classConfig}
         onSave={handleSaveClassConfig}
         students={students}
@@ -1998,6 +2013,7 @@ export default function App() {
         classDocuments={classDocuments}
         user={user}
         onCheckForUpdates={handleManualCheckUpdate}
+        isMandatory={isMandatorySettings}
       />
 
       {/* Weekly Rating Presentation Fullscreen Modal with TTS Voice */}

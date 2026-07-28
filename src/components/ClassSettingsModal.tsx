@@ -20,6 +20,7 @@ interface ClassSettingsModalProps {
   classDocuments?: ClassDocument[];
   user?: User | null;
   onCheckForUpdates?: () => void;
+  isMandatory?: boolean;
 }
 
 export const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
@@ -33,6 +34,7 @@ export const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
   classDocuments = [],
   user = null,
   onCheckForUpdates,
+  isMandatory = false,
 }) => {
   const [activeTab, setActiveTab] = useState<'config' | 'system'>('config');
   const [grade, setGrade] = useState(config.grade || '8');
@@ -162,6 +164,7 @@ export const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
       className: className.trim() || `${grade}${section}`,
       schoolYear,
       schoolName: schoolName.trim() || 'TRƯỜNG THCS ...',
+      configured: true,
     });
     onClose();
   };
@@ -170,7 +173,7 @@ export const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-lg">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -180,6 +183,14 @@ export const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
           {/* Decorative glows */}
           <div className="absolute -top-20 -right-20 w-60 h-60 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
+
+          {/* Mandatory Setup Banner */}
+          {isMandatory && (
+            <div className="p-3.5 mb-4 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs font-bold flex items-center space-x-2.5 shadow-lg animate-pulse relative z-10">
+              <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0" />
+              <span>YÊU CẦU BẮT BUỘC: Giáo viên mới vui lòng chọn Khối Lớp, Lớp và Năm Học để khởi tạo hệ thống!</span>
+            </div>
+          )}
 
           {/* Modal Header */}
           <div className="flex items-center justify-between pb-4 border-b border-white/10 relative z-10">
@@ -192,12 +203,14 @@ export const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
                 <p className="text-xs text-slate-300">Cấu hình đồng bộ & chẩn đoán hệ thống Lớp Học Số</p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            {!isMandatory && (
+              <button
+                onClick={onClose}
+                className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
           </div>
 
           {/* Tab Selection Bar */}
@@ -432,12 +445,14 @@ export const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
             </div>
 
             <div className="flex items-center space-x-3">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
-              >
-                Hủy
-              </button>
+              {!isMandatory && (
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  Hủy
+                </button>
+              )}
               {activeTab === 'config' && (
                 <motion.button
                   whileHover={{ scale: 1.02 }}

@@ -122,6 +122,7 @@ export interface ClassConfig {
   className: string;   // e.g. '8A2'
   schoolYear: string;  // e.g. '2026 - 2027'
   schoolName: string;  // e.g. 'TRƯỜNG THCS ...'
+  configured?: boolean;// true if initial setup is completed
 }
 
 
