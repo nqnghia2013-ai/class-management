@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, Settings, Check, GraduationCap, Calendar, Building2, Layers, 
   Monitor, Smartphone, Cpu, Database, Wifi, HardDrive, Info, Sparkles, 
-  ShieldCheck, BarChart3, Users, ClipboardList, ShieldAlert, FileText 
+  ShieldCheck, BarChart3, Users, ClipboardList, ShieldAlert, FileText, RefreshCw 
 } from 'lucide-react';
 import { ClassConfig, Student, ShiftAssignment, PenaltyRecord, ClassDocument } from '../types';
 import { GlassSelect, SelectOption } from './GlassSelect';
@@ -19,6 +19,7 @@ interface ClassSettingsModalProps {
   penalties?: PenaltyRecord[];
   classDocuments?: ClassDocument[];
   user?: User | null;
+  onCheckForUpdates?: () => void;
 }
 
 export const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
@@ -31,6 +32,7 @@ export const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
   penalties = [],
   classDocuments = [],
   user = null,
+  onCheckForUpdates,
 }) => {
   const [activeTab, setActiveTab] = useState<'config' | 'system'>('config');
   const [grade, setGrade] = useState(config.grade || '8');
@@ -310,20 +312,30 @@ export const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
             ) : (
               /* TAB 2: SYSTEM & DEVICE DIAGNOSTICS */
               <div className="space-y-4">
-                {/* App Version Badge */}
-                <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-900/40 via-indigo-900/40 to-blue-900/40 border border-purple-500/30 flex items-center justify-between shadow-lg">
+                {/* App Version Badge & Check for Updates Button */}
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-900/40 via-indigo-900/40 to-blue-900/40 border border-purple-500/30 flex flex-wrap items-center justify-between gap-3 shadow-lg">
                   <div className="flex items-center space-x-3">
                     <div className="p-2.5 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                      <Sparkles className="w-5 h-5 animate-pulse" />
+                      <Sparkles className="w-5 h-5 animate-pulse text-amber-300" />
                     </div>
                     <div>
                       <div className="text-xs font-bold uppercase tracking-wider text-purple-300">Phiên bản Hệ thống</div>
                       <div className="text-xl font-black display-font text-white">Phiên bản 28.07.26</div>
                     </div>
                   </div>
-                  <span className="px-3 py-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-extrabold rounded-full">
-                    Mới nhất ✓
-                  </span>
+
+                  <div className="flex items-center space-x-2">
+                    {onCheckForUpdates && (
+                      <button
+                        onClick={onCheckForUpdates}
+                        className="px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-md border border-white/20 flex items-center space-x-1.5 transition-all"
+                        title="Kiểm tra và cập nhật phiên bản mới nhất"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin-slow" />
+                        <span>Kiểm Tra Bản Cập Nhật</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Device & Web Platform Info */}

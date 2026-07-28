@@ -16,7 +16,10 @@ import { ClassOfficersTab } from './components/ClassOfficersTab';
 import { GlassSelect } from './components/GlassSelect';
 import { ClassSettingsModal } from './components/ClassSettingsModal';
 import { WeeklyRatingPresentation } from './components/WeeklyRatingPresentation';
+import { SystemUpdateModal } from './components/SystemUpdateModal';
 import { saveDocumentIDB, loadDocumentsIDB, deleteDocumentIDB } from './lib/idb';
+
+const CURRENT_APP_VERSION = '28.07.26';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
@@ -28,6 +31,51 @@ export default function App() {
   const ratingsGridRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+
+  // System Update state
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+
+  // Check system version on mount
+  useEffect(() => {
+    try {
+      const installedVersion = localStorage.getItem('installedAppVersion');
+      const postponedVersion = localStorage.getItem('postponedAppVersion');
+
+      if (!installedVersion) {
+        // Brand new installation: mark version 28.07.26
+        localStorage.setItem('installedAppVersion', CURRENT_APP_VERSION);
+      } else if (installedVersion !== CURRENT_APP_VERSION && postponedVersion !== CURRENT_APP_VERSION) {
+        // App updated on Vercel/GitHub but user hasn't updated or postponed -> Prompt System Update Modal!
+        setShowUpdateModal(true);
+      }
+    } catch (e) {
+      console.error('Error checking system update version', e);
+    }
+  }, []);
+
+  const handleUpdateComplete = () => {
+    try {
+      localStorage.setItem('installedAppVersion', CURRENT_APP_VERSION);
+      localStorage.removeItem('postponedAppVersion');
+    } catch (e) {}
+    setShowUpdateModal(false);
+    // Refresh application to reload newest assets & cache
+    window.location.reload();
+  };
+
+  const handlePostponeUpdate = () => {
+    try {
+      localStorage.setItem('postponedAppVersion', CURRENT_APP_VERSION);
+    } catch (e) {}
+    setShowUpdateModal(false);
+  };
+
+  const handleManualCheckUpdate = () => {
+    setShowSettingsModal(false);
+    setTimeout(() => {
+      setShowUpdateModal(true);
+    }, 200);
+  };
 
   // Class Settings state with local storage fallback
   const [classConfig, setClassConfig] = useState<ClassConfig>(() => {
@@ -1949,6 +1997,7 @@ export default function App() {
         penalties={penalties}
         classDocuments={classDocuments}
         user={user}
+        onCheckForUpdates={handleManualCheckUpdate}
       />
 
       {/* Weekly Rating Presentation Fullscreen Modal with TTS Voice */}
@@ -1960,6 +2009,14 @@ export default function App() {
         students={students}
         weeklyRatings={weeklyRatings}
         teamSummaries={teamSummaries}
+      />
+
+      {/* System Update Announcement & Progress Modal */}
+      <SystemUpdateModal
+        isOpen={showUpdateModal}
+        onCloseLater={handlePostponeUpdate}
+        onUpdateComplete={handleUpdateComplete}
+        latestVersion={CURRENT_APP_VERSION}
       />
     </div>
     </>
