@@ -1,0 +1,6 @@
+{
+  "name": "Class management",
+  "description": "Ứng dụng giúp quản lý danh sách lớp, phân công tổ trực, theo dõi tiến độ công việc vệ sinh và xuất báo cáo hàng tuần bằng Word/Excel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

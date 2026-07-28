@@ -1,0 +1,130 @@
+{
+  "entities": {
+    "student": {
+      "title": "Student",
+      "description": "Student in the class",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "code": { "type": "string" },
+        "name": { "type": "string" },
+        "team": { "type": "number" },
+        "userId": { "type": "string" },
+        "orderIndex": { "type": "number" },
+        "conduct": { "type": "string" },
+        "classNameText": { "type": "string" }
+      },
+      "required": ["id", "code", "name", "team", "userId"]
+    },
+    "shiftAssignment": {
+      "title": "Shift Assignment",
+      "description": "Assignment of a team to a day and shift",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "day": { "type": "string" },
+        "shift": { "type": "string" },
+        "team": { "type": "number" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "day", "shift", "team", "userId"]
+    },
+    "dutyRecord": {
+      "title": "Duty Record",
+      "description": "Record of a student's duty",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "location": { "type": "string" },
+        "status": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "studentId", "location", "status", "userId"]
+    },
+    "penaltyRecord": {
+      "title": "Penalty Record",
+      "description": "Record of a student's penalty",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "studentId": { "type": "string" },
+        "reason": { "type": "string" },
+        "deduction": { "type": "number" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "date", "studentId", "reason", "deduction", "userId"]
+    },
+    "teamConfig": {
+      "title": "Team Config",
+      "description": "Team leader and deputy",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "leader": { "type": "string" },
+        "deputy": { "type": "string" }
+      },
+      "required": ["id", "leader", "deputy"]
+    },
+    "weeklyRating": {
+      "title": "Weekly Rating",
+      "description": "Student weekly rating",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "week": { "type": "number" },
+        "studentId": { "type": "string" },
+        "rating": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "week", "studentId", "rating", "userId"]
+    },
+    "teamWeeklySummary": {
+      "title": "Team Weekly Summary",
+      "description": "Team weekly summary (points, violations)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "week": { "type": "number" },
+        "teamId": { "type": "number" },
+        "bonusPoints": { "type": "number" },
+        "penaltyPoints": { "type": "number" },
+        "totalPoints": { "type": "number" },
+        "violations": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "week", "teamId", "bonusPoints", "penaltyPoints", "totalPoints", "violations", "userId"]
+    }
+  },
+  "firestore": {
+    "users/{userId}/weeklyRatings/{ratingId}": {
+      "schema": { "$ref": "#/entities/weeklyRating" },
+      "description": "Weekly rating records"
+    },
+    "users/{userId}/teamWeeklySummaries/{summaryId}": {
+      "schema": { "$ref": "#/entities/teamWeeklySummary" },
+      "description": "Team weekly summary records"
+    },
+    "users/{userId}/teamConfigs/{teamId}": {
+      "schema": { "$ref": "#/entities/teamConfig" },
+      "description": "Team configurations"
+    },
+    "users/{userId}/students/{studentId}": {
+      "schema": { "$ref": "#/entities/student" },
+      "description": "Student records owned by the user"
+    },
+    "users/{userId}/shiftAssignments/{assignmentId}": {
+      "schema": { "$ref": "#/entities/shiftAssignment" },
+      "description": "Shift assignments owned by the user"
+    },
+    "users/{userId}/dutyRecords/{recordId}": {
+      "schema": { "$ref": "#/entities/dutyRecord" },
+      "description": "Duty records owned by the user"
+    },
+    "users/{userId}/penalties/{penaltyId}": {
+      "schema": { "$ref": "#/entities/penaltyRecord" },
+      "description": "Penalty records owned by the user"
+    }
+  }
+}

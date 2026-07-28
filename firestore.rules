@@ -1,0 +1,145 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { return id is string && id.size() <= 128; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    function isValidStudent(data) {
+      return data.keys().hasAll(['id', 'code', 'name', 'team', 'userId'])
+          && data.keys().size() >= 5 && data.keys().size() <= 8
+          && data.id is string && data.id.size() <= 128
+          && data.code is string && data.code.size() <= 128
+          && data.name is string && data.name.size() <= 128
+          && data.team is number
+          && data.userId is string && data.userId == request.auth.uid
+          && (!('orderIndex' in data) || (data.orderIndex is number))
+          && (!('conduct' in data) || (data.conduct is string && data.conduct.size() <= 20))
+          && (!('classNameText' in data) || (data.classNameText is string && data.classNameText.size() <= 128));
+    }
+
+    function isValidShiftAssignment(data) {
+      return data.keys().hasAll(['id', 'day', 'shift', 'team', 'userId'])
+          && (data.keys().size() == 5 || (data.keys().size() == 6 && 'week' in data && data.week is number))
+          && data.id is string && data.id.size() <= 128
+          && data.day is string && data.day.size() <= 128
+          && data.shift is string && data.shift.size() <= 128
+          && data.team is number
+          && data.userId is string && data.userId == request.auth.uid;
+    }
+
+    function isValidDutyRecord(data) {
+      return data.keys().hasAll(['id', 'day', 'shift', 'studentId', 'location', 'status', 'userId'])
+          && (data.keys().size() == 7 || (data.keys().size() == 8 && 'week' in data && data.week is number))
+          && data.id is string && data.id.size() <= 128
+          && data.day is string && data.day.size() <= 128
+          && data.shift is string && data.shift.size() <= 128
+          && data.studentId is string && data.studentId.size() <= 128
+          && data.location is string && data.location.size() <= 200
+          && data.status is string && data.status.size() <= 128
+          && data.userId is string && data.userId == request.auth.uid;
+    }
+
+    function isValidPenaltyRecord(data) {
+      return data.keys().hasAll(['id', 'date', 'studentId', 'reason', 'deduction', 'userId'])
+          && (data.keys().size() >= 6 && data.keys().size() <= 10)
+          && data.id is string && data.id.size() <= 128
+          && data.date is string && data.date.size() <= 128
+          && data.studentId is string && data.studentId.size() <= 128
+          && data.reason is string && data.reason.size() <= 1000
+          && data.deduction is number
+          && data.userId is string && data.userId == request.auth.uid
+          && (!('week' in data) || (data.week is number))
+          && (!('dutyDay' in data) || (data.dutyDay is string && data.dutyDay.size() <= 128))
+          && (!('dutyShift' in data) || (data.dutyShift is string && data.dutyShift.size() <= 128))
+          && (!('dutyLocation' in data) || (data.dutyLocation is string && data.dutyLocation.size() <= 200));
+    }
+
+    function isValidTeamConfig(data) {
+      return data.keys().hasAll(['id', 'leader', 'deputy'])
+          && data.keys().size() == 3
+          && data.id is string && data.id.size() <= 128
+          && data.leader is string && data.leader.size() <= 128
+          && data.deputy is string && data.deputy.size() <= 128;
+    }
+
+    function isValidWeeklyRating(data) {
+      return data.keys().hasAll(['id', 'week', 'studentId', 'rating', 'userId'])
+          && data.keys().size() == 5
+          && data.id is string && data.id.size() <= 128
+          && data.week is number
+          && data.studentId is string && data.studentId.size() <= 128
+          && data.rating is string && data.rating.size() <= 10
+          && data.userId is string && data.userId == request.auth.uid;
+    }
+
+    function isValidTeamWeeklySummary(data) {
+      return data.keys().hasAll(['id', 'week', 'teamId', 'bonusPoints', 'penaltyPoints', 'totalPoints', 'violations', 'userId'])
+          && data.keys().size() == 8
+          && data.id is string && data.id.size() <= 128
+          && data.week is number
+          && data.teamId is number
+          && data.bonusPoints is number
+          && data.penaltyPoints is number
+          && data.totalPoints is number
+          && data.violations is string && data.violations.size() <= 10000
+          && data.userId is string && data.userId == request.auth.uid;
+    }
+
+    match /users/{userId} {
+      match /weeklyRatings/{ratingId} {
+        allow read: if isSignedIn() && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn() && request.auth.uid == userId && isValidId(ratingId) && isValidWeeklyRating(incoming());
+        allow update: if isSignedIn() && request.auth.uid == userId && isValidId(ratingId) && isValidWeeklyRating(incoming()) && incoming().userId == existing().userId;
+        allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(ratingId) && existing().userId == request.auth.uid;
+      }
+      match /teamWeeklySummaries/{summaryId} {
+        allow read: if isSignedIn() && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn() && request.auth.uid == userId && isValidId(summaryId) && isValidTeamWeeklySummary(incoming());
+        allow update: if isSignedIn() && request.auth.uid == userId && isValidId(summaryId) && isValidTeamWeeklySummary(incoming()) && incoming().userId == existing().userId;
+        allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(summaryId) && existing().userId == request.auth.uid;
+      }
+      match /teamConfigs/{teamId} {
+        allow read: if isSignedIn() && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn() && request.auth.uid == userId && isValidId(teamId) && isValidTeamConfig(incoming());
+        allow update: if isSignedIn() && request.auth.uid == userId && isValidId(teamId) && isValidTeamConfig(incoming());
+      }
+      match /students/{studentId} {
+        allow read: if isSignedIn() && request.auth.uid == userId && ((resource == null) || (existing().userId == request.auth.uid));
+        allow list: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn() && request.auth.uid == userId && isValidId(studentId) && isValidStudent(incoming());
+        allow update: if isSignedIn() && request.auth.uid == userId && isValidId(studentId) && isValidStudent(incoming()) && incoming().userId == existing().userId;
+        allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(studentId) && existing().userId == request.auth.uid;
+      }
+      match /shiftAssignments/{assignmentId} {
+        allow read: if isSignedIn() && request.auth.uid == userId && ((resource == null) || (existing().userId == request.auth.uid));
+        allow list: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn() && request.auth.uid == userId && isValidId(assignmentId) && isValidShiftAssignment(incoming());
+        allow update: if isSignedIn() && request.auth.uid == userId && isValidId(assignmentId) && isValidShiftAssignment(incoming()) && incoming().userId == existing().userId;
+        allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(assignmentId) && existing().userId == request.auth.uid;
+      }
+      match /dutyRecords/{recordId} {
+        allow read: if isSignedIn() && request.auth.uid == userId && ((resource == null) || (existing().userId == request.auth.uid));
+        allow list: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn() && request.auth.uid == userId && isValidId(recordId) && isValidDutyRecord(incoming());
+        allow update: if isSignedIn() && request.auth.uid == userId && isValidId(recordId) && isValidDutyRecord(incoming()) && incoming().userId == existing().userId;
+        allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(recordId) && existing().userId == request.auth.uid;
+      }
+      match /penalties/{penaltyId} {
+        allow read: if isSignedIn() && request.auth.uid == userId && ((resource == null) || (existing().userId == request.auth.uid));
+        allow list: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn() && request.auth.uid == userId && isValidId(penaltyId) && isValidPenaltyRecord(incoming());
+        allow update: if isSignedIn() && request.auth.uid == userId && isValidId(penaltyId) && isValidPenaltyRecord(incoming()) && incoming().userId == existing().userId;
+        allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(penaltyId) && existing().userId == request.auth.uid;
+      }
+    }
+  }
+}
