@@ -1767,9 +1767,9 @@ export default function App() {
 
   if (!user && !isGuestMode) {
     return (
-      <LoginPage 
-        onLoginGoogle={handleLogin} 
-        onContinueGuest={() => setIsGuestMode(true)} 
+      <LoginPage
+        onLogin={handleLogin}
+        onGuestAccess={() => setIsGuestMode(true)}
       />
     );
   }
@@ -1958,16 +1958,39 @@ export default function App() {
           <div className="p-4 border-t border-white/10 mt-auto flex flex-col gap-3">
             <div className="bg-black/20 rounded-xl p-3 text-sm backdrop-blur-sm border border-white/5">
               <p className="text-blue-300/80 mb-1 text-[10px] font-bold uppercase tracking-wider">Tài khoản</p>
-              <p className="font-bold mb-3 truncate text-white" title={user.email || ''}>{user.displayName || user.email}</p>
-              <motion.button 
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleLogout}
-                className="w-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 py-2 rounded-lg font-semibold text-xs flex items-center justify-center space-x-2 transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Đăng xuất</span>
-              </motion.button>
+              {user ? (
+                <>
+                  <p className="font-bold mb-3 truncate text-white" title={user.email || ''}>{user.displayName || user.email}</p>
+                  <motion.button 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleLogout}
+                    className="w-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 py-2 rounded-lg font-semibold text-xs flex items-center justify-center space-x-2 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Đăng xuất</span>
+                  </motion.button>
+                </>
+              ) : (
+                <>
+                  <p className="font-bold mb-3 text-amber-300 text-xs flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                    Chế độ Dùng Thử (Offline)
+                  </p>
+                  <motion.button 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      setIsGuestMode(false);
+                      handleLogin();
+                    }}
+                    className="w-full bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-300 py-2 rounded-lg font-semibold text-xs flex items-center justify-center space-x-2 transition-colors shadow-sm"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span>Đăng Nhập Google</span>
+                  </motion.button>
+                </>
+              )}
             </div>
             
             <div className="flex flex-col gap-2">
