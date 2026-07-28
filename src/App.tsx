@@ -30,6 +30,9 @@ export default function App() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
+  // Delete All Students confirmation modal state
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+
   // System Update state
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateDetails, setUpdateDetails] = useState<{
@@ -704,6 +707,27 @@ export default function App() {
     }
   };
 
+  const handleDeleteAllStudents = async () => {
+    if (students.length === 0) return;
+
+    if (user) {
+      try {
+        const batch = writeBatch(db);
+        students.forEach(st => {
+          batch.delete(doc(db, "users", user.uid, "students", st.id));
+        });
+        await batch.commit();
+      } catch (err) {
+        console.error("Lỗi khi xóa toàn bộ học sinh trên Firestore:", err);
+      }
+    }
+    setStudents([]);
+    try {
+      localStorage.removeItem('students');
+    } catch (e) {}
+    setShowDeleteAllConfirm(false);
+  };
+
   // Handlers for Shifts
   const handleUpdateShift = async (day: DayType, shift: ShiftType, team: number) => {
     const id = currentWeek === 1 ? `${day}-${shift}` : `w${currentWeek}-${day}-${shift}`;
@@ -993,6 +1017,17 @@ export default function App() {
           >
             <Plus size={16} /> Thêm HS
           </motion.button>
+          {students.length > 0 && (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowDeleteAllConfirm(true)}
+              className="flex items-center justify-center gap-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 px-4 py-2 rounded-xl text-sm font-semibold transition-colors border border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.15)]"
+              title="Xóa toàn bộ danh sách học sinh khỏi hệ thống"
+            >
+              <Trash2 size={16} /> Xóa Tất Cả ({students.length})
+            </motion.button>
+          )}
         </div>
       </header>
       <div className="flex-1 p-4 sm:p-6 overflow-auto space-y-6">
@@ -2073,6 +2108,57 @@ export default function App() {
         latestVersion={updateDetails.latestVersion}
         changelog={updateDetails.changelog}
       />
+
+      {/* Delete All Students Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteAllConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-lg">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="glass-card w-full max-w-md rounded-3xl p-6 border-2 border-rose-500/40 shadow-[0_0_50px_rgba(244,63,94,0.25)] bg-gradient-to-b from-slate-900/95 via-slate-950/95 to-slate-950/95 text-white relative overflow-hidden space-y-6"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="p-3 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30 shadow-lg">
+                  <AlertTriangle className="w-6 h-6 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black display-font text-white">Xóa Toàn Bộ Học Sinh?</h3>
+                  <p className="text-xs text-rose-300 font-semibold">Cảnh báo hành động không thể khôi phục!</p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-black/40 border border-white/10 text-xs text-slate-300 leading-relaxed space-y-2">
+                <p>
+                  Bạn có chắc chắn muốn xóa toàn bộ <strong className="text-rose-400 font-bold">{students.length} học sinh</strong> khỏi danh sách lớp hiện tại không?
+                </p>
+                <p className="text-[11px] text-slate-400 italic">
+                  * Danh sách học sinh trên hệ thống (và dữ liệu Cloud Firestore) sẽ bị xóa hoàn toàn.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 pt-2 border-t border-white/10">
+                <button
+                  onClick={() => setShowDeleteAllConfirm(false)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-colors border border-white/10"
+                >
+                  Hủy Bỏ
+                </button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleDeleteAllStudents}
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white shadow-lg shadow-rose-500/30 border border-rose-400/40 flex items-center space-x-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Xác Nhận Xóa Tất Cả</span>
+                </motion.button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
     </>
   );
