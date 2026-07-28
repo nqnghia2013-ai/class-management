@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, CalendarDays, ClipboardList, Download, Plus, Trash2, Save, LayoutDashboard, AlertTriangle, FileText, Upload, LogIn, LogOut, Maximize, Minimize, Image as ImageIcon, Award, BookOpen, Crown, Settings, Volume2 } from 'lucide-react';
+import { Users, CalendarDays, ClipboardList, Download, Plus, Trash2, Save, LayoutDashboard, AlertTriangle, FileText, Upload, LogIn, LogOut, Maximize, Minimize, Image as ImageIcon, Award, BookOpen, Crown, Settings, Volume2, QrCode } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import * as XLSX from 'xlsx';
 import { Student, ShiftAssignment, StudentDutyRecord, DayType, ShiftType, LocationType, StatusType, PenaltyRecord, TeamConfig, WeeklyRating, TeamWeeklySummary, RatingType, ConductType, TabType, Announcement, ClassDocument, ClassOfficersConfig, ClassConfig } from './types';
@@ -18,6 +18,7 @@ import { ClassSettingsModal } from './components/ClassSettingsModal';
 import { WeeklyRatingPresentation } from './components/WeeklyRatingPresentation';
 import { SystemUpdateModal } from './components/SystemUpdateModal';
 import { LoginPage } from './components/LoginPage';
+import { QRScannerModal } from './components/QRScannerModal';
 import { APP_BUILD_VERSION, checkServerVersion } from './lib/versionConfig';
 
 export default function App() {
@@ -34,6 +35,9 @@ export default function App() {
 
   // Delete All Students confirmation modal state
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+
+  // QR Scanner Modal state (mobile only)
+  const [showQRScanner, setShowQRScanner] = useState(false);
 
   // System Update state
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -1961,6 +1965,16 @@ export default function App() {
               {user ? (
                 <>
                   <p className="font-bold mb-3 truncate text-white" title={user.email || ''}>{user.displayName || user.email}</p>
+                  {/* QR Scanner Button - Mobile Only */}
+                  <motion.button 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowQRScanner(true)}
+                    className="w-full bg-gradient-to-r from-blue-500/15 to-indigo-500/15 hover:from-blue-500/25 hover:to-indigo-500/25 border border-blue-500/25 text-blue-300 py-2 rounded-lg font-semibold text-xs flex items-center justify-center space-x-2 transition-colors mb-2 md:hidden"
+                  >
+                    <QrCode className="w-4 h-4" />
+                    <span>Quét mã đăng nhập máy tính</span>
+                  </motion.button>
                   <motion.button 
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -2162,6 +2176,15 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* QR Scanner Modal (Mobile) */}
+      {user && (
+        <QRScannerModal
+          isOpen={showQRScanner}
+          onClose={() => setShowQRScanner(false)}
+          user={user}
+        />
+      )}
     </div>
     </>
   );
