@@ -141,5 +141,10 @@ service cloud.firestore {
         allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(penaltyId) && existing().userId == request.auth.uid;
       }
     }
+
+    // Rules cho tính năng Đăng nhập QR Code (cho phép tạo, đọc, cập nhật phiên QR)
+    match /qrLoginSessions/{sessionId} {
+      allow read, create, update, delete: if true;
+    }
   }
 }
