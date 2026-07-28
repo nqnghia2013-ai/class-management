@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { 
-  Sparkles, ShieldCheck, Zap, GraduationCap, ArrowRight, 
-  CheckCircle2, Globe, Laptop, Users, Award, Lock
+  Sparkles, ShieldCheck, GraduationCap, ArrowRight, 
+  CheckCircle2, Globe, Laptop, Lock
 } from 'lucide-react';
 
 interface LoginPageProps {
@@ -12,11 +12,11 @@ interface LoginPageProps {
 }
 
 const TYPEWRITER_PHRASES = [
-  "🚀 Nâng tầm quản lý lớp học bằng công nghệ số AI 4.0...",
-  "⚡ Đồng bộ dữ liệu Real-time 0ms đa thiết bị trên Cloud...",
-  "🎙️ Trình chiếu thi đua xếp loại tuần kèm giọng đọc AI tự động...",
-  "📄 Xuất báo cáo Excel & Word chuẩn định dạng sư phạm...",
-  "📱 Tự động chẩn đoán thiết bị và tối ưu trải nghiệm người dùng...",
+  "✨ Khởi tạo thông tin lớp học, năm học & phân chia 4 tổ tự động...",
+  "📊 Sơ kết thi đua tuần, chấm điểm trực tuần & xếp loại lớp...",
+  "🎙️ Trình chiếu thi đua toàn màn hình tích hợp giọng đọc AI...",
+  "📄 Nhập xuất dữ liệu học sinh Excel, Word chuẩn định dạng sư phạm...",
+  "☁️ Đồng bộ dữ liệu real-time 0ms bảo mật trên Cloud...",
 ];
 
 export const LoginPage: React.FC<LoginPageProps> = ({
@@ -38,7 +38,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       if (displayText.length < currentPhrase.length) {
         timer = setTimeout(() => {
           setDisplayText(currentPhrase.slice(0, displayText.length + 1));
-        }, 60);
+        }, 55);
       } else {
         // Pause at full phrase before erasing
         timer = setTimeout(() => {
@@ -50,7 +50,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       if (displayText.length > 0) {
         timer = setTimeout(() => {
           setDisplayText(currentPhrase.slice(0, displayText.length - 1));
-        }, 30);
+        }, 25);
       } else {
         // Switch to next phrase
         setIsDeleting(false);
@@ -109,9 +109,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               </div>
             </div>
 
+            {/* Perfectly balanced 2-line heading */}
             <div className="pt-4">
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black display-font text-white leading-tight tracking-tight">
-                Hệ Thống Quản Lý Lớp Học <br />
+              <h1 className="text-2xl sm:text-3xl lg:text-[2.2rem] font-black display-font text-white leading-tight tracking-tight">
+                Nền Tảng Quản Lý Lớp Học<br />
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-indigo-300 to-cyan-300">
                   Thông Minh & Hiện Đại 4.0
                 </span>
@@ -120,27 +121,27 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </div>
 
           {/* MIDDLE: DYNAMIC TYPEWRITER TEXT EFFECT (Chữ gõ rồi xóa) */}
-          <div className="my-8 lg:my-12 relative z-10">
-            <div className="p-5 sm:p-6 rounded-2xl bg-slate-950/60 border border-purple-500/30 backdrop-blur-xl shadow-2xl relative overflow-hidden group">
+          <div className="my-8 lg:my-10 relative z-10">
+            <div className="p-5 sm:p-6 rounded-2xl bg-slate-950/70 border border-purple-500/30 backdrop-blur-xl shadow-2xl relative overflow-hidden group">
               <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-purple-500 via-indigo-500 to-cyan-400" />
               
-              <div className="flex items-center space-x-2 text-xs font-bold text-purple-300 uppercase tracking-wider mb-2">
+              <div className="flex items-center space-x-2 text-xs font-bold text-purple-300 uppercase tracking-wider mb-2.5">
                 <Sparkles className="w-4 h-4 text-amber-300 animate-spin-slow" />
                 <span>Trợ Lý Trí Tuệ Nhân Tạo AI</span>
               </div>
 
               {/* Typewriter text line with blinking cursor */}
               <div className="min-h-[64px] flex items-center">
-                <p className="text-base sm:text-lg font-semibold text-slate-100 leading-relaxed font-mono">
+                <p className="text-sm sm:text-base font-semibold text-slate-100 leading-relaxed font-mono tracking-wide">
                   {displayText}
-                  <span className="inline-block w-2.5 h-5 bg-purple-400 ml-1 translate-y-0.5 animate-pulse shadow-[0_0_8px_rgba(192,132,252,0.8)]" />
+                  <span className="inline-block w-2.5 h-4.5 bg-purple-400 ml-1 translate-y-0.5 animate-pulse shadow-[0_0_8px_rgba(192,132,252,0.8)]" />
                 </p>
               </div>
 
               <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400">
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  Tự động đồng bộ 0ms
+                  Đồng bộ Real-time 0ms
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Globe className="w-3.5 h-3.5 text-cyan-400" />
@@ -150,19 +151,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </div>
           </div>
 
-          {/* BOTTOM: TECH FEATURE BADGES */}
+          {/* BOTTOM: NEW REFINED PROFESSIONAL STATS BADGES */}
           <div className="grid grid-cols-3 gap-3 relative z-10">
             <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-center space-y-1">
-              <div className="text-purple-400 font-bold text-lg sm:text-xl display-font">99.9%</div>
-              <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Đồng Bộ Cloud</div>
+              <div className="text-purple-400 font-bold text-base sm:text-lg display-font">4 TỔ</div>
+              <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">THI ĐỦA TỰ ĐỘNG</div>
             </div>
             <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-center space-y-1">
-              <div className="text-indigo-400 font-bold text-lg sm:text-xl display-font">TTS AI</div>
-              <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Giọng Đọc Nữ</div>
+              <div className="text-cyan-400 font-bold text-base sm:text-lg display-font">0ms</div>
+              <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">ĐỒNG BỘ REAL-TIME</div>
             </div>
             <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-center space-y-1">
-              <div className="text-emerald-400 font-bold text-lg sm:text-xl display-font">100%</div>
-              <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Chuẩn Sư Phạm</div>
+              <div className="text-emerald-400 font-bold text-base sm:text-lg display-font">EXCEL / WORD</div>
+              <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">XUẤT BÁO CÁO CHUẨN</div>
             </div>
           </div>
         </div>
@@ -235,7 +236,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <div className="grid grid-cols-1 gap-2 text-xs text-slate-300">
                 <div className="flex items-center space-x-2">
                   <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" />
-                  <span>Bắt buộc khởi tạo Khối Lớp, Lớp và Năm học</span>
+                  <span>Cấu hình thông tin lớp học, khối & năm học</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" />
@@ -243,7 +244,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 </div>
                 <div className="flex items-center space-x-2">
                   <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" />
-                  <span>Tự động kiểm tra bản cập nhật mới trên Web</span>
+                  <span>Tự động kiểm tra & thông báo bản cập nhật Web</span>
                 </div>
               </div>
             </div>
