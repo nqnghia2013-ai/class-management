@@ -1938,12 +1938,17 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      {/* Class Settings Modal */}
+      {/* Class Settings & System Info Modal */}
       <ClassSettingsModal
         isOpen={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
         config={classConfig}
         onSave={handleSaveClassConfig}
+        students={students}
+        shiftAssignments={shiftAssignments}
+        penalties={penalties}
+        classDocuments={classDocuments}
+        user={user}
       />
 
       {/* Weekly Rating Presentation Fullscreen Modal with TTS Voice */}
