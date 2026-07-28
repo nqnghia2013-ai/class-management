@@ -17,7 +17,7 @@ import { GlassSelect } from './components/GlassSelect';
 import { ClassSettingsModal } from './components/ClassSettingsModal';
 import { WeeklyRatingPresentation } from './components/WeeklyRatingPresentation';
 import { SystemUpdateModal } from './components/SystemUpdateModal';
-import { CURRENT_APP_VERSION, checkServerVersion } from './lib/versionConfig';
+import { APP_BUILD_VERSION, checkServerVersion } from './lib/versionConfig';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
@@ -37,14 +37,14 @@ export default function App() {
     latestVersion: string;
     changelog: string[];
   }>({
-    currentVersion: CURRENT_APP_VERSION,
-    latestVersion: CURRENT_APP_VERSION,
+    currentVersion: localStorage.getItem('installedAppVersion') || APP_BUILD_VERSION,
+    latestVersion: APP_BUILD_VERSION,
     changelog: [],
   });
 
   const performVersionCheck = async (isManual = false) => {
     try {
-      const res = await checkServerVersion();
+      const res = await checkServerVersion(isManual);
       if (res.hasUpdate) {
         setUpdateDetails({
           currentVersion: res.currentVersion,
@@ -89,6 +89,12 @@ export default function App() {
       localStorage.setItem('installedAppVersion', updateDetails.latestVersion);
       localStorage.removeItem('postponedAppVersion');
     } catch (e) {}
+    if (user) {
+      setDoc(doc(db, "users", user.uid, "settings", "versionInfo"), {
+        installedVersion: updateDetails.latestVersion,
+        updatedAt: new Date().toISOString(),
+      }).catch(err => console.warn("Error updating versionInfo in Firestore:", err));
+    }
     setShowUpdateModal(false);
     // Hard reload application to clear asset cache
     window.location.reload();

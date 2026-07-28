@@ -8,7 +8,7 @@ import {
 import { ClassConfig, Student, ShiftAssignment, PenaltyRecord, ClassDocument } from '../types';
 import { GlassSelect, SelectOption } from './GlassSelect';
 import { User } from 'firebase/auth';
-import { CURRENT_APP_VERSION } from '../lib/versionConfig';
+import { APP_BUILD_VERSION } from '../lib/versionConfig';
 
 interface ClassSettingsModalProps {
   isOpen: boolean;
@@ -334,7 +334,14 @@ export const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
                     </div>
                     <div>
                       <div className="text-xs font-bold uppercase tracking-wider text-purple-300">Phiên bản Hệ thống</div>
-                      <div className="text-xl font-black display-font text-white">Phiên bản v{CURRENT_APP_VERSION}</div>
+                      <div className="text-xl font-black display-font text-white flex items-center gap-2">
+                        <span>Phiên bản v{localStorage.getItem('installedAppVersion') || APP_BUILD_VERSION}</span>
+                        {localStorage.getItem('postponedAppVersion') && (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold uppercase animate-pulse">
+                            Có bản mới
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
