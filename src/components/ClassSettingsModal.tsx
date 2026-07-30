@@ -20,7 +20,6 @@ interface ClassSettingsModalProps {
   penalties?: PenaltyRecord[];
   classDocuments?: ClassDocument[];
   user?: User | null;
-  onCheckForUpdates?: () => void;
   isMandatory?: boolean;
 }
 
@@ -34,7 +33,6 @@ export const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
   penalties = [],
   classDocuments = [],
   user = null,
-  onCheckForUpdates,
   isMandatory = false,
 }) => {
   const [activeTab, setActiveTab] = useState<'config' | 'system'>('config');
@@ -326,36 +324,18 @@ export const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
             ) : (
               /* TAB 2: SYSTEM & DEVICE DIAGNOSTICS */
               <div className="space-y-4">
-                {/* App Version Badge & Check for Updates Button */}
-                <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-900/40 via-indigo-900/40 to-blue-900/40 border border-purple-500/30 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+                {/* App Version Badge */}
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-900/40 via-indigo-900/40 to-blue-900/40 border border-purple-500/30 flex items-center justify-between gap-3 shadow-lg">
                   <div className="flex items-center space-x-3">
                     <div className="p-2.5 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                      <Sparkles className="w-5 h-5 animate-pulse text-amber-300" />
+                      <Sparkles className="w-5 h-5 text-amber-300" />
                     </div>
                     <div>
                       <div className="text-xs font-bold uppercase tracking-wider text-purple-300">Phiên bản Hệ thống</div>
-                      <div className="text-xl font-black display-font text-white flex items-center gap-2">
-                        <span>Phiên bản v{localStorage.getItem('installedAppVersion') || APP_BUILD_VERSION}</span>
-                        {localStorage.getItem('postponedAppVersion') && (
-                          <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold uppercase animate-pulse">
-                            Có bản mới
-                          </span>
-                        )}
+                      <div className="text-xl font-black display-font text-white">
+                        <span>Phiên bản v{APP_BUILD_VERSION}</span>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    {onCheckForUpdates && (
-                      <button
-                        onClick={onCheckForUpdates}
-                        className="px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-md border border-white/20 flex items-center space-x-1.5 transition-all"
-                        title="Kiểm tra và cập nhật phiên bản mới nhất"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin-slow" />
-                        <span>Kiểm Tra Bản Cập Nhật</span>
-                      </button>
-                    )}
                   </div>
                 </div>
 

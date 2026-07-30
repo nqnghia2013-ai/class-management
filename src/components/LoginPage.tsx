@@ -4,14 +4,23 @@ import {
   Sparkles, ShieldCheck, Zap, Award, BookOpen, Layers, 
   ArrowRight, Globe, CheckCircle2, ChevronRight, UserCheck, Lock, Play, 
   Cpu, Server, Activity, QrCode, Smartphone, RefreshCw, BarChart3, Volume2, Radio,
-  Monitor, Loader2, User as UserIcon, AlertCircle
+  Monitor, Loader2, User as UserIcon, AlertCircle, Mail, LogIn, Check, KeyRound,
+  Car, Bike, Bus, Trees, Building2, HelpCircle, X
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { 
   createQRSession, listenQRSession, deleteQRSession, 
   buildQRCodeUrl, isSessionValid, QRLoginSession
 } from '../lib/qrLoginService';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  FacebookAuthProvider, 
+  OAuthProvider, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  updateProfile 
+} from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
 interface LoginPageProps {
@@ -27,6 +36,331 @@ const TYPEWRITER_SLOGANS = [
   { text: "Đồng bộ Dữ liệu Đa thiết bị Cloud Firestore...", tag: "Multi-device Sync" },
   { text: "Xuất Báo cáo Excel / Word & Phiếu phạt chuẩn Sư phạm...", tag: "Pedagogy Format" }
 ];
+
+// ============================================================
+// Helper: CAPTCHA Code Generator & Noise Canvas Component
+// ============================================================
+const generateRandomCaptcha = (): string => {
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let result = '';
+  for (let i = 0; i < 5; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
+const CaptchaImage: React.FC<{ code: string; onRefresh: () => void }> = ({ code, onRefresh }) => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Background gradient with noise
+    const bgGrad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    bgGrad.addColorStop(0, '#0f172a');
+    bgGrad.addColorStop(0.5, '#1e1b4b');
+    bgGrad.addColorStop(1, '#020617');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw random noise lines
+    for (let i = 0; i < 6; i++) {
+      ctx.strokeStyle = `rgba(${100 + Math.random() * 155}, ${100 + Math.random() * 155}, 255, 0.4)`;
+      ctx.lineWidth = 1 + Math.random() * 2;
+      ctx.beginPath();
+      ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
+      ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height);
+      ctx.stroke();
+    }
+
+    // Draw random dots
+    for (let i = 0; i < 25; i++) {
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.2 + Math.random() * 0.4})`;
+      ctx.beginPath();
+      ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Draw stylized, rotated characters
+    const charColors = ['#60a5fa', '#a78bfa', '#34d399', '#f472b6', '#fbbf24'];
+    ctx.font = 'bold 20px monospace';
+    ctx.textBaseline = 'middle';
+
+    const charWidth = canvas.width / (code.length + 0.8);
+
+    for (let i = 0; i < code.length; i++) {
+      const char = code[i];
+      const x = (i + 0.7) * charWidth;
+      const y = canvas.height / 2 + (Math.random() * 4 - 2);
+      const angle = (Math.random() * 26 - 13) * (Math.PI / 180);
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.fillStyle = charColors[i % charColors.length];
+      ctx.shadowColor = charColors[i % charColors.length];
+      ctx.shadowBlur = 6;
+      ctx.fillText(char, -6, 0);
+      ctx.restore();
+    }
+  }, [code]);
+
+  return (
+    <div className="flex items-center space-x-2">
+      <div className="relative rounded-xl overflow-hidden border border-white/20 shadow-inner bg-slate-950 p-0.5">
+        <canvas ref={canvasRef} width={130} height={36} className="block rounded-lg" />
+      </div>
+      <button
+        type="button"
+        onClick={onRefresh}
+        title="Đổi mã bảo mật khác"
+        className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white border border-white/15 transition-all"
+      >
+        <RefreshCw className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+};
+
+// ============================================================
+// reCAPTCHA 3x3 Image Selection Puzzle Game Component
+// ============================================================
+interface RecaptchaTile {
+  id: number;
+  label: string;
+  category: 'traffic_light' | 'car' | 'bicycle' | 'crosswalk' | 'bus' | 'building' | 'tree';
+  color: string;
+}
+
+const RECAPTCHA_ROUNDS = [
+  {
+    targetCategory: 'traffic_light',
+    targetTitle: 'ĐÈN GIAO THÔNG',
+    subText: 'Chọn tất cả hình ảnh có chứa Đèn Giao Thông',
+    tiles: [
+      { id: 1, label: 'Đèn tín hiệu ngã tư', category: 'traffic_light', color: 'from-red-950/60 to-slate-900' },
+      { id: 2, label: 'Tòa nhà cao tầng', category: 'building', color: 'from-slate-800/60 to-slate-900' },
+      { id: 3, label: 'Xe buýt trường học', category: 'bus', color: 'from-amber-950/60 to-slate-900' },
+      { id: 4, label: 'Hàng cây xanh', category: 'tree', color: 'from-emerald-950/60 to-slate-900' },
+      { id: 5, label: 'Cột đèn giao thông', category: 'traffic_light', color: 'from-yellow-950/60 to-slate-900' },
+      { id: 6, label: 'Xe hơi 4 chỗ', category: 'car', color: 'from-blue-950/60 to-slate-900' },
+      { id: 7, label: 'Đèn giao thông đô thị', category: 'traffic_light', color: 'from-amber-900/60 to-slate-900' },
+      { id: 8, label: 'Xe đạp thể thao', category: 'bicycle', color: 'from-purple-950/60 to-slate-900' },
+      { id: 9, label: 'Nhà chung cư', category: 'building', color: 'from-slate-800/60 to-slate-900' },
+    ]
+  },
+  {
+    targetCategory: 'car',
+    targetTitle: 'XE Ô TÔ / XE HƠI',
+    subText: 'Chọn tất cả hình ảnh có chứa Xe Ô Tô',
+    tiles: [
+      { id: 1, label: 'Xe SUV màu đỏ', category: 'car', color: 'from-rose-950/60 to-slate-900' },
+      { id: 2, label: 'Cột đèn đường', category: 'traffic_light', color: 'from-slate-800/60 to-slate-900' },
+      { id: 3, label: 'Xe Sedan xanh', category: 'car', color: 'from-blue-950/60 to-slate-900' },
+      { id: 4, label: 'Xe buýt 45 chỗ', category: 'bus', color: 'from-amber-950/60 to-slate-900' },
+      { id: 5, label: 'Xe máy tay ga', category: 'bicycle', color: 'from-purple-950/60 to-slate-900' },
+      { id: 6, label: 'Xe bán tải', category: 'car', color: 'from-indigo-950/60 to-slate-900' },
+      { id: 7, label: 'Công viên cây xanh', category: 'tree', color: 'from-emerald-950/60 to-slate-900' },
+      { id: 8, label: 'Xe ô tô điện', category: 'car', color: 'from-cyan-950/60 to-slate-900' },
+      { id: 9, label: 'Đèn tín hiệu', category: 'traffic_light', color: 'from-slate-800/60 to-slate-900' },
+    ]
+  },
+  {
+    targetCategory: 'bicycle',
+    targetTitle: 'XE ĐẠP & XE MÁY',
+    subText: 'Chọn tất cả hình ảnh có chứa Xe Đạp hoặc Xe Máy',
+    tiles: [
+      { id: 1, label: 'Tòa án thành phố', category: 'building', color: 'from-slate-800/60 to-slate-900' },
+      { id: 2, label: 'Xe đạp leo núi', category: 'bicycle', color: 'from-purple-950/60 to-slate-900' },
+      { id: 3, label: 'Xe hơi gia đình', category: 'car', color: 'from-blue-950/60 to-slate-900' },
+      { id: 4, label: 'Xe máy Vespa', category: 'bicycle', color: 'from-indigo-950/60 to-slate-900' },
+      { id: 5, label: 'Hàng rào cây', category: 'tree', color: 'from-emerald-950/60 to-slate-900' },
+      { id: 6, label: 'Xe đạp đua', category: 'bicycle', color: 'from-pink-950/60 to-slate-900' },
+      { id: 7, label: 'Xe buýt tuyến', category: 'bus', color: 'from-amber-950/60 to-slate-900' },
+      { id: 8, label: 'Tòa nhà văn phòng', category: 'building', color: 'from-slate-800/60 to-slate-900' },
+      { id: 9, label: 'Xe đạp điện', category: 'bicycle', color: 'from-purple-900/60 to-slate-900' },
+    ]
+  }
+];
+
+interface RecaptchaModalGameProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const RecaptchaModalGame: React.FC<RecaptchaModalGameProps> = ({ isOpen, onClose, onSuccess }) => {
+  const [roundIndex, setRoundIndex] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const currentRound = RECAPTCHA_ROUNDS[roundIndex % RECAPTCHA_ROUNDS.length];
+
+  const handleTileClick = (id: number) => {
+    setErrorMsg(null);
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleVerify = () => {
+    // Check if selectedIds match target tiles
+    const targetIds = currentRound.tiles
+      .filter(t => t.category === currentRound.targetCategory)
+      .map(t => t.id);
+
+    const isMatch = 
+      targetIds.length > 0 &&
+      targetIds.every(id => selectedIds.includes(id)) &&
+      selectedIds.every(id => targetIds.includes(id));
+
+    if (isMatch) {
+      onSuccess();
+      onClose();
+    } else {
+      setErrorMsg('Vui lòng chọn chính xác tất cả các hình khớp với yêu cầu!');
+      // Switch to next round and clear selections
+      setRoundIndex(prev => prev + 1);
+      setSelectedIds([]);
+    }
+  };
+
+  const handleRefresh = () => {
+    setRoundIndex(prev => prev + 1);
+    setSelectedIds([]);
+    setErrorMsg(null);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 15 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 15 }}
+          className="w-full max-w-sm rounded-2xl bg-[#1e293b] border border-slate-700 shadow-2xl overflow-hidden text-white font-sans select-none"
+        >
+          {/* Header Banner (reCAPTCHA Blue Header) */}
+          <div className="p-4 bg-gradient-to-r from-blue-600 to-indigo-700 space-y-1 relative">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-blue-200">
+              Nhấp vào tất cả các hình ảnh có chứa
+            </div>
+            <div className="text-xl font-black display-font text-white tracking-wide">
+              {currentRound.targetTitle}
+            </div>
+            <div className="text-[11px] text-blue-100 italic">
+              {currentRound.subText}
+            </div>
+
+            <button 
+              type="button"
+              onClick={onClose}
+              className="absolute top-3 right-3 p-1.5 rounded-lg bg-black/20 hover:bg-black/40 text-white/80 hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Error alert banner */}
+          {errorMsg && (
+            <div className="p-2.5 bg-rose-500/20 border-b border-rose-500/30 text-rose-300 text-xs font-semibold flex items-center space-x-2 animate-bounce">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {/* 3x3 Tile Grid */}
+          <div className="p-3 bg-slate-950 grid grid-cols-3 gap-2">
+            {currentRound.tiles.map((tile) => {
+              const isSelected = selectedIds.includes(tile.id);
+              return (
+                <button
+                  key={tile.id}
+                  type="button"
+                  onClick={() => handleTileClick(tile.id)}
+                  className={`aspect-square rounded-xl p-2 flex flex-col items-center justify-center space-y-1 border transition-all relative overflow-hidden bg-gradient-to-br ${tile.color} ${
+                    isSelected 
+                      ? 'border-blue-400 ring-2 ring-blue-500 shadow-lg scale-[0.97]' 
+                      : 'border-white/10 hover:border-white/30'
+                  }`}
+                >
+                  {/* Selected Tick Overlay */}
+                  {isSelected && (
+                    <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md animate-pop">
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    </div>
+                  )}
+
+                  {/* Tile Icon Rendering */}
+                  <div className={`p-2 rounded-xl transition-all ${
+                    isSelected ? 'bg-blue-600/30 text-blue-300' : 'bg-white/5 text-slate-300'
+                  }`}>
+                    {tile.category === 'traffic_light' && <Activity className="w-6 h-6 text-amber-400 animate-pulse" />}
+                    {tile.category === 'car' && <Car className="w-6 h-6 text-blue-400" />}
+                    {tile.category === 'bicycle' && <Bike className="w-6 h-6 text-purple-400" />}
+                    {tile.category === 'bus' && <Bus className="w-6 h-6 text-amber-300" />}
+                    {tile.category === 'tree' && <Trees className="w-6 h-6 text-emerald-400" />}
+                    {tile.category === 'building' && <Building2 className="w-6 h-6 text-slate-400" />}
+                  </div>
+
+                  <span className="text-[10px] font-bold text-slate-300 text-center leading-tight line-clamp-1">
+                    {tile.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Footer Bar */}
+          <div className="p-3 bg-slate-900 border-t border-slate-800 flex items-center justify-between">
+            <div className="flex items-center space-x-2 text-slate-400">
+              <button
+                type="button"
+                onClick={handleRefresh}
+                title="Đổi thử thách khác"
+                className="p-2 rounded-lg hover:bg-slate-800 hover:text-white transition-colors"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => alert('Thử thách âm thanh đang sẵn sàng.')}
+                title="Thử thách bằng âm thanh"
+                className="p-2 rounded-lg hover:bg-slate-800 hover:text-white transition-colors"
+              >
+                <Volume2 className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => alert('Chọn đúng tất cả các ô có chứa đối tượng yêu cầu ở hình trên.')}
+                title="Trợ giúp"
+                className="p-2 rounded-lg hover:bg-slate-800 hover:text-white transition-colors"
+              >
+                <HelpCircle className="w-4 h-4" />
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleVerify}
+              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-blue-500/30 border border-blue-400/30 transition-all"
+            >
+              Xác Nhận
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+};
 
 // ============================================================
 // Hook: useIsMobile - Detect mobile viewport
@@ -154,7 +488,170 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGuestAccess }) 
   // On mobile, always default to SSO (QR tab hidden)
   const [authTab, setAuthTab] = useState<'sso' | 'qr'>(isMobile ? 'sso' : 'sso');
   
-  // Interactive showcase card tab
+  // SSO Auth Sub-Mode: 'social' (Google, Facebook, Microsoft) | 'register' (Đăng ký email) | 'login' (Đăng nhập email)
+  const [ssoSubMode, setSsoSubMode] = useState<'social' | 'register' | 'login'>('social');
+
+  // Form states for Email Register / Sign in
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+
+  // Loading & Error states
+  const [loadingAuth, setLoadingAuth] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  // 1. Google Login Handler
+  const handleGoogleLogin = async () => {
+    setLoadingAuth('google');
+    setAuthError(null);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
+      console.error('Google login error:', error);
+      if (error.code !== 'auth/popup-closed-by-user') {
+        setAuthError('Đăng nhập Google thất bại: ' + (error.message || 'Lỗi kết nối'));
+      }
+    } finally {
+      setLoadingAuth(null);
+    }
+  };
+
+  // 2. Facebook Login Handler
+  const handleFacebookLogin = async () => {
+    setLoadingAuth('facebook');
+    setAuthError(null);
+    try {
+      const provider = new FacebookAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
+      console.error('Facebook login error:', error);
+      if (error.code === 'auth/popup-closed-by-user') {
+        setAuthError('Cửa sổ đăng nhập Facebook đã bị đóng.');
+      } else if (error.code === 'auth/operation-not-allowed') {
+        setAuthError('Đăng nhập Facebook chưa được kích hoạt trong Firebase Console (Authentication -> Sign-in method -> Facebook).');
+      } else if (error.code === 'auth/account-exists-with-different-credential') {
+        setAuthError('Email này đã được sử dụng với phương thức đăng nhập khác (Google/Email).');
+      } else {
+        setAuthError('Đăng nhập Facebook thất bại: Cần cấu hình Facebook App ID trong Firebase Console.');
+      }
+    } finally {
+      setLoadingAuth(null);
+    }
+  };
+
+  // 3. Microsoft Login Handler
+  const handleMicrosoftLogin = async () => {
+    setLoadingAuth('microsoft');
+    setAuthError(null);
+    try {
+      const provider = new OAuthProvider('microsoft.com');
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
+      console.error('Microsoft login error:', error);
+      if (error.code === 'auth/popup-closed-by-user') {
+        setAuthError('Cửa sổ đăng nhập Microsoft đã bị đóng.');
+      } else if (error.code === 'auth/operation-not-allowed') {
+        setAuthError('Đăng nhập Microsoft chưa được kích hoạt trong Firebase Console (Authentication -> Sign-in method -> Microsoft).');
+      } else {
+        setAuthError('Đăng nhập Microsoft thất bại: Cần bật Microsoft Provider trong Firebase Console.');
+      }
+    } finally {
+      setLoadingAuth(null);
+    }
+  };
+
+  // Captcha & Robot verification states for Registration
+  const [captchaCode, setCaptchaCode] = useState(generateRandomCaptcha);
+  const [userCaptchaInput, setUserCaptchaInput] = useState('');
+  const [isRobotChecked, setIsRobotChecked] = useState(false);
+  const [showRobotModal, setShowRobotModal] = useState(false);
+
+  const refreshCaptcha = useCallback(() => {
+    setCaptchaCode(generateRandomCaptcha());
+    setUserCaptchaInput('');
+  }, []);
+
+  // 4. Email Register Handler
+  const handleRegisterWithEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+
+    if (!email.trim() || !password.trim()) {
+      setAuthError('Vui lòng nhập đầy đủ Email và Mật khẩu.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setAuthError('Mật khẩu xác nhận không khớp.');
+      return;
+    }
+    if (password.length < 6) {
+      setAuthError('Mật khẩu phải có tối thiểu 6 ký tự.');
+      return;
+    }
+    if (!userCaptchaInput.trim()) {
+      setAuthError('Vui lòng nhập mã bảo mật trong hình.');
+      return;
+    }
+    if (userCaptchaInput.trim().toUpperCase() !== captchaCode.toUpperCase()) {
+      setAuthError('Mã bảo mật trong hình không chính xác. Đã tự động tạo mã mới!');
+      refreshCaptcha();
+      return;
+    }
+    if (!isRobotChecked) {
+      setAuthError('Vui lòng đánh dấu xác thực "Tôi không phải là người máy".');
+      return;
+    }
+
+    setLoadingAuth('register');
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+      if (displayName.trim() && userCredential.user) {
+        await updateProfile(userCredential.user, { displayName: displayName.trim() });
+      }
+    } catch (error: any) {
+      console.error('Email register error:', error);
+      if (error.code === 'auth/email-already-in-use') {
+        setAuthError('Email này đã được đăng ký. Vui lòng chuyển sang Đăng Nhập!');
+      } else if (error.code === 'auth/invalid-email') {
+        setAuthError('Địa chỉ Email không hợp lệ.');
+      } else if (error.code === 'auth/weak-password') {
+        setAuthError('Mật khẩu quá yếu (tối thiểu 6 ký tự).');
+      } else {
+        setAuthError('Đăng ký thất bại: ' + (error.message || 'Lỗi hệ thống'));
+      }
+    } finally {
+      setLoadingAuth(null);
+    }
+  };
+
+  // 5. Email Login Handler
+  const handleLoginWithEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+
+    if (!email.trim() || !password.trim()) {
+      setAuthError('Vui lòng nhập Email và Mật khẩu.');
+      return;
+    }
+
+    setLoadingAuth('email_login');
+    try {
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+    } catch (error: any) {
+      console.error('Email login error:', error);
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        setAuthError('Email hoặc mật khẩu không chính xác.');
+      } else if (error.code === 'auth/too-many-requests') {
+        setAuthError('Tài khoản tạm thời bị khóa do nhập sai nhiều lần. Vui lòng thử lại sau.');
+      } else {
+        setAuthError('Đăng nhập thất bại: ' + (error.message || 'Lỗi hệ thống'));
+      }
+    } finally {
+      setLoadingAuth(null);
+    }
+  };
   const [activeShowcase, setActiveShowcase] = useState<number>(0);
 
   // Typewriter effect states
@@ -515,7 +1012,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGuestAccess }) 
 
             {/* TAB CONTENT */}
             <AnimatePresence mode="wait">
-              {/* TAB 1: GOOGLE SSO (shown on both mobile and desktop) */}
+              {/* TAB 1: SSO & EMAIL REGISTRATION / LOGIN */}
               {(authTab === 'sso' || isMobile) && (
                 <motion.div
                   key="sso-tab"
@@ -523,49 +1020,346 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGuestAccess }) 
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
                   transition={{ duration: 0.25 }}
-                  className="space-y-6"
+                  className="space-y-5"
                 >
-                  <div className="space-y-2 text-center lg:text-left">
+                  <div className="space-y-1.5 text-center lg:text-left">
                     <h2 className="text-2xl sm:text-3xl font-black display-font text-white tracking-tight">
                       Xin Chào Giáo Viên! 👋
                     </h2>
                     <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                      Đăng nhập tài khoản Google Giáo Viên để mở khóa toàn bộ quyền điều hành và đồng bộ dữ liệu.
+                      Lựa chọn phương thức đăng nhập hoặc đăng ký tài khoản mới để mở khóa toàn bộ tính năng.
                     </p>
                   </div>
 
-                  {/* Primary Google Login Button */}
-                  <div className="space-y-3 pt-2">
-                    <motion.button
-                      whileHover={{ scale: 1.02, translateY: -2 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={onLogin}
-                      className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold text-sm sm:text-base shadow-[0_12px_35px_rgba(59,130,246,0.4)] border border-blue-400/40 flex items-center justify-center space-x-3 transition-all group relative overflow-hidden"
+                  {/* Sub-mode selector pills */}
+                  <div className="p-1 bg-white/5 border border-white/10 rounded-xl grid grid-cols-3 gap-1 text-[11px] sm:text-xs font-bold">
+                    <button
+                      type="button"
+                      onClick={() => { setSsoSubMode('social'); setAuthError(null); }}
+                      className={`py-2 px-1 rounded-lg transition-all flex items-center justify-center space-x-1 whitespace-nowrap ${
+                        ssoSubMode === 'social'
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
                     >
-                      <div className="absolute inset-0 w-1/2 h-full bg-white/20 skew-x-12 -translate-x-full group-hover:translate-x-[300%] transition-transform duration-1000 ease-in-out" />
-                      
-                      <div className="w-7 h-7 rounded-xl bg-white flex items-center justify-center p-1 shadow-md shrink-0">
-                        <img 
-                          src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
-                          alt="Google" 
-                          className="w-full h-full object-contain" 
-                        />
-                      </div>
-                      <span className="tracking-wide">Đăng nhập bằng Google SSO</span>
-                      <ArrowRight className="w-4 h-4 text-blue-200 group-hover:translate-x-1 transition-transform ml-auto" />
-                    </motion.button>
-
-                    {/* Guest Access Button */}
-                    {onGuestAccess && (
-                      <button
-                        onClick={onGuestAccess}
-                        className="w-full py-3 px-4 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-bold text-xs border border-white/10 transition-colors flex items-center justify-center space-x-2"
-                      >
-                        <Play className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Trải nghiệm chế độ dùng thử (Offline Mode)</span>
-                      </button>
-                    )}
+                      <Globe className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">Mạng Xã Hội</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setSsoSubMode('register'); setAuthError(null); }}
+                      className={`py-2 px-1 rounded-lg transition-all flex items-center justify-center space-x-1 whitespace-nowrap ${
+                        ssoSubMode === 'register'
+                          ? 'bg-purple-600 text-white shadow-md'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <UserIcon className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">Đăng Ký</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setSsoSubMode('login'); setAuthError(null); }}
+                      className={`py-2 px-1 rounded-lg transition-all flex items-center justify-center space-x-1 whitespace-nowrap ${
+                        ssoSubMode === 'login'
+                          ? 'bg-indigo-600 text-white shadow-md'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <LogIn className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">Đăng Nhập</span>
+                    </button>
                   </div>
+
+                  {/* Error Banner */}
+                  {authError && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-3 rounded-xl bg-red-500/20 border border-red-500/40 text-red-200 text-xs flex items-center space-x-2.5 shadow-md"
+                    >
+                      <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                      <span>{authError}</span>
+                    </motion.div>
+                  )}
+
+                  {/* SUB-MODE 1: SOCIAL LOGIN (Google, Facebook, Microsoft) */}
+                  {ssoSubMode === 'social' && (
+                    <div className="space-y-3 pt-1">
+                      {/* Primary Google Login Button */}
+                      <motion.button
+                        whileHover={{ scale: 1.02, translateY: -1 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={handleGoogleLogin}
+                        disabled={loadingAuth !== null}
+                        className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold text-sm shadow-[0_10px_30px_rgba(59,130,246,0.35)] border border-blue-400/40 flex items-center justify-center space-x-3 transition-all group relative overflow-hidden disabled:opacity-50"
+                      >
+                        {loadingAuth === 'google' ? (
+                          <Loader2 className="w-5 h-5 animate-spin text-white" />
+                        ) : (
+                          <>
+                            <div className="w-6 h-6 rounded-lg bg-white flex items-center justify-center p-1 shadow-md shrink-0">
+                              <img 
+                                src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
+                                alt="Google" 
+                                className="w-full h-full object-contain" 
+                              />
+                            </div>
+                            <span className="tracking-wide">Đăng nhập bằng Google SSO</span>
+                            <ArrowRight className="w-4 h-4 text-blue-200 group-hover:translate-x-1 transition-transform ml-auto" />
+                          </>
+                        )}
+                      </motion.button>
+
+                      {/* Facebook & Microsoft Login Grid */}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {/* Facebook Login */}
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={handleFacebookLogin}
+                          disabled={loadingAuth !== null}
+                          className="py-3 px-4 rounded-xl bg-[#1877F2]/20 hover:bg-[#1877F2]/30 border border-[#1877F2]/40 text-white font-bold text-xs flex items-center justify-center space-x-2 transition-all shadow-sm disabled:opacity-50"
+                        >
+                          {loadingAuth === 'facebook' ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4 fill-[#1877F2]" viewBox="0 0 24 24">
+                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                              </svg>
+                              <span>Facebook</span>
+                            </>
+                          )}
+                        </motion.button>
+
+                        {/* Microsoft Login */}
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={handleMicrosoftLogin}
+                          disabled={loadingAuth !== null}
+                          className="py-3 px-4 rounded-xl bg-slate-800/60 hover:bg-slate-700/60 border border-slate-600/40 text-white font-bold text-xs flex items-center justify-center space-x-2 transition-all shadow-sm disabled:opacity-50"
+                        >
+                          {loadingAuth === 'microsoft' ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4" viewBox="0 0 23 23">
+                                <path fill="#f35325" d="M1 1h10v10H1z"/>
+                                <path fill="#81bc06" d="M12 1h10v10H12z"/>
+                                <path fill="#05a6f0" d="M1 12h10v10H1z"/>
+                                <path fill="#ffba08" d="M12 12h10v10H12z"/>
+                              </svg>
+                              <span>Microsoft</span>
+                            </>
+                          )}
+                        </motion.button>
+                      </div>
+
+                      {/* Guest Access Button */}
+                      {onGuestAccess && (
+                        <button
+                          type="button"
+                          onClick={onGuestAccess}
+                          className="w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white font-semibold text-xs border border-white/10 transition-colors flex items-center justify-center space-x-2 mt-2"
+                        >
+                          <Play className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Dùng thử Chế độ Offline</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* SUB-MODE 2: REGISTRATION FORM */}
+                  {ssoSubMode === 'register' && (
+                    <form onSubmit={handleRegisterWithEmail} className="space-y-3 pt-1">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block">Họ & Tên Giáo Viên</label>
+                        <div className="relative">
+                          <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="text"
+                            placeholder="Ví dụ: Nguyễn Văn A"
+                            value={displayName}
+                            onChange={(e) => setDisplayName(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-black/40 border border-white/15 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-purple-500 transition-colors"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block">Địa chỉ Email</label>
+                        <div className="relative">
+                          <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="email"
+                            required
+                            placeholder="teacher@school.edu.vn"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-black/40 border border-white/15 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-purple-500 transition-colors"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block">Mật khẩu</label>
+                          <div className="relative">
+                            <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="password"
+                              required
+                              placeholder="••••••••"
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-black/40 border border-white/15 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-purple-500 transition-colors"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block">Nhập lại MK</label>
+                          <div className="relative">
+                            <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="password"
+                              required
+                              placeholder="••••••••"
+                              value={confirmPassword}
+                              onChange={(e) => setConfirmPassword(e.target.value)}
+                              className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-black/40 border border-white/15 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-purple-500 transition-colors"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* CAPTCHA Security Code Image + Input */}
+                      <div className="p-2.5 rounded-xl bg-black/40 border border-white/15 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
+                            <span>Mã Bảo Mật Trong Hình:</span>
+                          </label>
+                          <CaptchaImage code={captchaCode} onRefresh={refreshCaptcha} />
+                        </div>
+
+                        <div className="relative">
+                          <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="text"
+                            required
+                            placeholder="Nhập 5 ký tự trong hình (VD: A8K9X)"
+                            value={userCaptchaInput}
+                            onChange={(e) => setUserCaptchaInput(e.target.value.toUpperCase())}
+                            maxLength={5}
+                            className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-900/80 border border-white/15 text-white text-xs font-mono tracking-widest placeholder:text-slate-500 uppercase focus:outline-none focus:border-purple-500 transition-colors"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Robot Checkbox Card (Launches 3x3 reCAPTCHA Image Challenge Game) */}
+                      <div 
+                        onClick={() => {
+                          if (!isRobotChecked) {
+                            setShowRobotModal(true);
+                          } else {
+                            setIsRobotChecked(false);
+                          }
+                        }}
+                        className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between select-none ${
+                          isRobotChecked 
+                            ? 'bg-emerald-500/20 border-emerald-400/50 text-white shadow-md' 
+                            : 'bg-black/40 border-white/15 text-slate-400 hover:border-white/30'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2.5">
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
+                            isRobotChecked ? 'bg-emerald-500 border-emerald-400 text-white' : 'border-white/30 bg-white/5'
+                          }`}>
+                            {isRobotChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                          </div>
+                          <span className="text-xs font-bold">
+                            {isRobotChecked ? 'Đã xác thực không phải robot!' : 'Tôi không phải là người máy'}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-1 text-[10px] text-slate-400 font-mono">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>reCAPTCHA v2</span>
+                        </div>
+                      </div>
+
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        type="submit"
+                        disabled={loadingAuth !== null}
+                        className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-purple-500/30 border border-purple-400/40 flex items-center justify-center space-x-2 transition-all mt-2 disabled:opacity-50"
+                      >
+                        {loadingAuth === 'register' ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-white" />
+                        ) : (
+                          <>
+                            <UserIcon className="w-4 h-4 text-purple-200" />
+                            <span>Tạo Tài Khoản Mới</span>
+                          </>
+                        )}
+                      </motion.button>
+                    </form>
+                  )}
+
+                  {/* SUB-MODE 3: EMAIL LOGIN FORM */}
+                  {ssoSubMode === 'login' && (
+                    <form onSubmit={handleLoginWithEmail} className="space-y-3 pt-1">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block">Địa chỉ Email</label>
+                        <div className="relative">
+                          <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="email"
+                            required
+                            placeholder="teacher@school.edu.vn"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-black/40 border border-white/15 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block">Mật khẩu</label>
+                        <div className="relative">
+                          <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="password"
+                            required
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-black/40 border border-white/15 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                          />
+                        </div>
+                      </div>
+
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        type="submit"
+                        disabled={loadingAuth !== null}
+                        className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-indigo-500/30 border border-indigo-400/40 flex items-center justify-center space-x-2 transition-all mt-2 disabled:opacity-50"
+                      >
+                        {loadingAuth === 'email_login' ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-white" />
+                        ) : (
+                          <>
+                            <LogIn className="w-4 h-4 text-indigo-200" />
+                            <span>Đăng Nhập Email</span>
+                          </>
+                        )}
+                      </motion.button>
+                    </form>
+                  )}
                 </motion.div>
               )}
 
@@ -773,6 +1567,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGuestAccess }) 
           </div>
         </div>
       </motion.div>
+
+      {/* Interactive 3x3 reCAPTCHA Image Selection Game Modal */}
+      <RecaptchaModalGame
+        isOpen={showRobotModal}
+        onClose={() => setShowRobotModal(false)}
+        onSuccess={() => setIsRobotChecked(true)}
+      />
     </div>
   );
 };

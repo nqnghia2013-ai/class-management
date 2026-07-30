@@ -16,10 +16,10 @@ import { ClassOfficersTab } from './components/ClassOfficersTab';
 import { GlassSelect } from './components/GlassSelect';
 import { ClassSettingsModal } from './components/ClassSettingsModal';
 import { WeeklyRatingPresentation } from './components/WeeklyRatingPresentation';
-import { SystemUpdateModal } from './components/SystemUpdateModal';
 import { LoginPage } from './components/LoginPage';
 import { QRScannerModal } from './components/QRScannerModal';
-import { APP_BUILD_VERSION, checkServerVersion } from './lib/versionConfig';
+import { saveDocumentIDB, loadDocumentsIDB, deleteDocumentIDB } from './lib/idb';
+
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
@@ -39,89 +39,6 @@ export default function App() {
   // QR Scanner Modal state (mobile only)
   const [showQRScanner, setShowQRScanner] = useState(false);
 
-  // System Update state
-  const [showUpdateModal, setShowUpdateModal] = useState(false);
-  const [updateDetails, setUpdateDetails] = useState<{
-    currentVersion: string;
-    latestVersion: string;
-    changelog: string[];
-  }>({
-    currentVersion: localStorage.getItem('installedAppVersion') || APP_BUILD_VERSION,
-    latestVersion: APP_BUILD_VERSION,
-    changelog: [],
-  });
-
-  const performVersionCheck = async (isManual = false) => {
-    try {
-      const res = await checkServerVersion(isManual);
-      if (res.hasUpdate) {
-        setUpdateDetails({
-          currentVersion: res.currentVersion,
-          latestVersion: res.latestVersion,
-          changelog: res.changelog,
-        });
-        setShowUpdateModal(true);
-      } else if (isManual) {
-        alert(`Hệ thống đang chạy trên phiên bản mới nhất (v${res.currentVersion}).`);
-      }
-    } catch (e) {
-      console.warn('Error performing version check', e);
-    }
-  };
-
-  // Check system version on mount, periodically & on tab focus
-  useEffect(() => {
-    // Initial check
-    performVersionCheck(false);
-
-    // Periodic check every 10 minutes
-    const intervalId = setInterval(() => {
-      performVersionCheck(false);
-    }, 10 * 60 * 1000);
-
-    // Tab visibility change check
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        performVersionCheck(false);
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
-
-  const handleUpdateComplete = () => {
-    try {
-      localStorage.setItem('installedAppVersion', updateDetails.latestVersion);
-      localStorage.removeItem('postponedAppVersion');
-    } catch (e) {}
-    if (user) {
-      setDoc(doc(db, "users", user.uid, "settings", "versionInfo"), {
-        installedVersion: updateDetails.latestVersion,
-        updatedAt: new Date().toISOString(),
-      }).catch(err => console.warn("Error updating versionInfo in Firestore:", err));
-    }
-    setShowUpdateModal(false);
-    // Hard reload application to clear asset cache
-    window.location.reload();
-  };
-
-  const handlePostponeUpdate = () => {
-    try {
-      localStorage.setItem('postponedAppVersion', updateDetails.latestVersion);
-    } catch (e) {}
-    setShowUpdateModal(false);
-  };
-
-  const handleManualCheckUpdate = () => {
-    setShowSettingsModal(false);
-    setTimeout(() => {
-      performVersionCheck(true);
-    }, 300);
-  };
 
   // Class Settings state with local storage fallback
   const [classConfig, setClassConfig] = useState<ClassConfig>(() => {
@@ -2101,7 +2018,6 @@ export default function App() {
         penalties={penalties}
         classDocuments={classDocuments}
         user={user}
-        onCheckForUpdates={handleManualCheckUpdate}
         isMandatory={isMandatorySettings}
       />
 
@@ -2114,16 +2030,6 @@ export default function App() {
         students={students}
         weeklyRatings={weeklyRatings}
         teamSummaries={teamSummaries}
-      />
-
-      {/* System Update Announcement & Progress Modal */}
-      <SystemUpdateModal
-        isOpen={showUpdateModal}
-        onCloseLater={handlePostponeUpdate}
-        onUpdateComplete={handleUpdateComplete}
-        currentVersion={updateDetails.currentVersion}
-        latestVersion={updateDetails.latestVersion}
-        changelog={updateDetails.changelog}
       />
 
       {/* Delete All Students Confirmation Modal */}
