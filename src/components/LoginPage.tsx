@@ -762,18 +762,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGuestAccess }) 
       {/* Futuristic Cyber Grid Pattern */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:3.5rem_3.5rem] [mask-image:radial-gradient(ellipse_75%_65%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
 
-      {/* Top Chinese SaaS Floating Brand Bar */}
+      {/* Top Floating Brand Bar */}
       <div className="absolute top-6 left-6 lg:left-12 flex items-center space-x-3 z-20">
-        <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 p-0.5 shadow-[0_0_20px_rgba(79,70,229,0.5)]">
-          <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-amber-300 animate-pulse" />
-          </div>
-        </div>
+        <img 
+          src="/logo.png" 
+          alt="Class Management Logo" 
+          className="w-10 h-10 rounded-2xl object-cover shadow-[0_0_20px_rgba(79,70,229,0.5)] border border-white/20"
+        />
         <div>
           <span className="text-sm font-black display-font tracking-tight text-white block">
-            LỚP HỌC SỐ <span className="text-blue-400 font-mono text-xs">AI MATRIX</span>
+            Class Management <span className="text-blue-400 font-mono text-xs">PRO</span>
           </span>
-          <span className="text-[10px] text-slate-400 font-medium block">Hệ thống Quản lý Lớp học 4.0</span>
+          <span className="text-[10px] text-slate-400 font-medium block">Hệ thống Quản lý Lớp học</span>
         </div>
       </div>
 

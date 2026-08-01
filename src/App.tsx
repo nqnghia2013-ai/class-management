@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, CalendarDays, ClipboardList, Download, Plus, Trash2, Save, LayoutDashboard, AlertTriangle, FileText, Upload, LogIn, LogOut, Maximize, Minimize, Image as ImageIcon, Award, BookOpen, Crown, Settings, Volume2, QrCode } from 'lucide-react';
+import { Users, CalendarDays, ClipboardList, Download, Plus, Trash2, Save, LayoutDashboard, AlertTriangle, FileText, Upload, LogIn, LogOut, Maximize, Minimize, Image as ImageIcon, Award, BookOpen, Crown, Settings, Volume2, QrCode, Zap, Sparkles, Bot } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import * as XLSX from 'xlsx';
 import { Student, ShiftAssignment, StudentDutyRecord, DayType, ShiftType, LocationType, StatusType, PenaltyRecord, TeamConfig, WeeklyRating, TeamWeeklySummary, RatingType, ConductType, TabType, Announcement, ClassDocument, ClassOfficersConfig, ClassConfig } from './types';
@@ -19,6 +19,7 @@ import { WeeklyRatingPresentation } from './components/WeeklyRatingPresentation'
 import { LoginPage } from './components/LoginPage';
 import { QRScannerModal } from './components/QRScannerModal';
 import { saveDocumentIDB, loadDocumentsIDB, deleteDocumentIDB } from './lib/idb';
+import { AIAssistantTab } from './components/AIAssistantTab';
 
 
 export default function App() {
@@ -1698,20 +1699,27 @@ export default function App() {
   return (
     <>
       <div className="atmosphere" />
-      <div className="w-full h-screen flex flex-col md:flex-row overflow-hidden font-sans relative z-10 text-slate-100 p-2 md:p-4 gap-2 md:gap-4">
+      <div className="w-full h-screen max-h-screen flex flex-col md:flex-row overflow-hidden font-sans relative z-10 text-slate-100 p-2 md:p-3 gap-2 md:gap-3 box-border">
         {/* Sidebar */}
-        <aside className="w-full md:w-72 glass-card rounded-2xl flex flex-col shrink-0 z-20 shadow-2xl overflow-hidden">
-          <div className="p-6 border-b border-white/10 hidden md:block relative">
+        <aside className="w-full md:w-72 glass-card rounded-2xl flex flex-col shrink-0 z-20 shadow-2xl overflow-hidden h-full max-h-full">
+          <div className="p-4 md:p-5 border-b border-white/10 hidden md:block relative shrink-0">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full blur-[40px] -z-10"></div>
-            <div className="flex items-center justify-between mb-1">
-              <h1 className="text-2xl display-font font-bold tracking-tight text-white">{classConfig.className} Class management</h1>
-              <button 
-                onClick={() => setShowSettingsModal(true)}
-                className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-blue-300 transition-colors border border-white/10"
-                title="Cài Đặt Lớp & Năm Học"
-              >
-                <Settings className="w-4.5 h-4.5 animate-spin-slow" />
-              </button>
+            <div className="flex items-center space-x-3 mb-2">
+              <img 
+                src="/logo.png" 
+                alt="Logo" 
+                className="w-10 h-10 rounded-xl object-cover shadow-lg border border-white/20 shrink-0" 
+              />
+              <div className="flex-1 min-w-0 flex items-center justify-between">
+                <h1 className="text-xl display-font font-bold tracking-tight text-white truncate" title="Class management">Class management</h1>
+                <button 
+                  onClick={() => setShowSettingsModal(true)}
+                  className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-blue-300 transition-colors border border-white/10 shrink-0 ml-2"
+                  title="Cài Đặt Lớp & Năm Học"
+                >
+                  <Settings className="w-4.5 h-4.5 animate-spin-slow" />
+                </button>
+              </div>
             </div>
             <p className="text-xs text-blue-300 mb-3 uppercase font-semibold">Lớp {classConfig.className} • Năm học {classConfig.schoolYear}</p>
             <div className="flex items-center space-x-2">
@@ -1729,9 +1737,16 @@ export default function App() {
           </div>
           
           {/* Mobile Header Toggle */}
-          <div className="p-4 border-b border-white/10 md:hidden flex flex-col gap-2 glass-panel">
+          <div className="p-4 border-b border-white/10 md:hidden flex flex-col gap-2 glass-panel shrink-0">
              <div className="flex justify-between items-center">
-                 <h1 className="text-xl display-font font-bold tracking-tight text-white">{classConfig.className} Class management</h1>
+                 <div className="flex items-center space-x-2">
+                   <img 
+                     src="/logo.png" 
+                     alt="Logo" 
+                     className="w-8 h-8 rounded-lg object-cover shadow-md border border-white/20 shrink-0" 
+                   />
+                   <h1 className="text-lg display-font font-bold tracking-tight text-white">Class management</h1>
+                 </div>
                  <button 
                    onClick={() => setShowSettingsModal(true)}
                    className="p-1.5 rounded-xl bg-white/10 text-blue-300 border border-white/10"
@@ -1757,7 +1772,7 @@ export default function App() {
              </div>
           </div>
 
-          <nav className="flex-none p-4 flex overflow-x-auto gap-2 md:flex-col md:overflow-visible md:gap-0 md:space-y-2 md:flex-1">
+          <nav className="flex-none p-3 md:p-4 flex overflow-x-auto gap-2 md:flex-col md:overflow-y-auto md:overflow-x-hidden md:gap-0 md:space-y-1.5 md:flex-1 min-h-0 sidebar-scroll">
             <motion.button 
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -1874,9 +1889,22 @@ export default function App() {
               <Users className="w-5 h-5 shrink-0" />
               <span>Danh sách Lớp</span>
             </motion.button>
+
+            <motion.button 
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setActiveTab('ai-assistant')}
+              className={cn(
+                "flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all text-sm shrink-0 shadow-sm border border-transparent whitespace-nowrap",
+                activeTab === 'ai-assistant' ? "bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-blue-500/20 text-emerald-300 border-emerald-400/30 shadow-[0_0_20px_rgba(16,185,129,0.2)] font-bold" : "text-slate-300 hover:bg-white/5 hover:text-white"
+              )}
+            >
+              <Zap className="w-5 h-5 shrink-0 text-amber-300 animate-pulse" />
+              <span>Trợ Lý AI Groq</span>
+            </motion.button>
           </nav>
 
-          <div className="p-4 border-t border-white/10 mt-auto flex flex-col gap-3">
+          <div className="p-4 border-t border-white/10 mt-auto flex flex-col gap-3 shrink-0">
             <div className="bg-black/20 rounded-xl p-3 text-sm backdrop-blur-sm border border-white/5">
               <p className="text-blue-300/80 mb-1 text-[10px] font-bold uppercase tracking-wider">Tài khoản</p>
               {user ? (
@@ -1948,7 +1976,7 @@ export default function App() {
         </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden h-[calc(100vh-140px)] md:h-screen bg-[#060c21]/60 backdrop-blur-3xl border border-white/10 md:rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)] relative z-20 md:ml-4 m-2">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden h-full max-h-full bg-[#060c21]/60 backdrop-blur-3xl border border-white/10 md:rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)] relative z-20">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -1998,6 +2026,24 @@ export default function App() {
                 onUpdateOfficersConfig={handleUpdateOfficersConfig}
                 onUpdateTeamConfig={handleUpdateTeamConfig}
               />
+            )}
+            {activeTab === 'ai-assistant' && (
+              <div className="flex-1 p-4 md:p-6 overflow-y-auto">
+                <AIAssistantTab
+                  currentWeek={currentWeek}
+                  students={students}
+                  dutyRecords={dutyRecords}
+                  penalties={penalties}
+                  teamSummaries={teamSummaries}
+                  officersConfig={officersConfig}
+                  teamConfigs={teamConfigs}
+                  weeklyRatings={weeklyRatings}
+                  classDocuments={classDocuments}
+                  className={classConfig.className}
+                  schoolYear={classConfig.schoolYear}
+                  homeroomTeacher={classConfig.homeroomTeacher}
+                />
+              </div>
             )}
           </motion.div>
         </AnimatePresence>

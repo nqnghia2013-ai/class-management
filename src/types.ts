@@ -72,10 +72,11 @@ export interface TeamWeeklySummary {
   penaltyPoints: number;
   totalPoints: number;
   violations: string;
+  rank?: number;
   userId?: string;
 }
 
-export type TabType = 'home' | 'class' | 'shifts' | 'tracking' | 'penalties' | 'ratings' | 'conduct' | 'documents' | 'officers';
+export type TabType = 'home' | 'class' | 'shifts' | 'tracking' | 'penalties' | 'ratings' | 'conduct' | 'documents' | 'officers' | 'ai-assistant';
 
 export interface ClassOfficersConfig {
   id: string; // 'main'
